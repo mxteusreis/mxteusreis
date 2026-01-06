@@ -16,6 +16,16 @@ My focus is on transforming raw data into **reliable insights, predictive models
 
 ---
 
+## 🎓 Education
+
+**🎓 Bachelor's in Computer Engineering**  
+📍 Universidade Veiga de Almeida — 2022
+
+**🎓 MBA in IT Management with a focus on Data Governance**  
+📍 Universidade Veiga de Almeida — 2025
+
+---
+
 ## 🛠️ Tech Stack
 - **Languages:** Python, SQL  
 - **Data & Analytics:** Power BI, Databricks, Spark  
@@ -44,4 +54,5 @@ My focus is on transforming raw data into **reliable insights, predictive models
 ---
 
 ## 🤝 Let's connect
-- LinkedIn: https://www.linkedin.com/in/mateusreisx/
+- 🔗 LinkedIn: https://www.linkedin.com/in/mateusreisx/  
+- 📬 Email: mateusreis@outlook.com  
