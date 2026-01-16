@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+
+# Logs and data outputs
+*.log
+data/*
+!data/README.md
+
+# Spark
+spark-warehouse/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
