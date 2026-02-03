@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.env.*
+.ipynb_checkpoints/
+.DS_Store
+artifacts/*.joblib
+artifacts/*.pkl
+artifacts/*.csv
+artifacts/*.json
+data/raw/*.csv
+data/curated/*.csv
+data/gold/*.csv
