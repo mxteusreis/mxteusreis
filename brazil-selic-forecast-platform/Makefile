@@ -1,7 +1,7 @@
 PYTHON=python
 PYTHONPATH=.
 
-.PHONY: ingest features train api ui up down test
+.PHONY: ingest features train export refresh-all api ui up down test
 
 ingest:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m src.ingestion.pull_sgs_series
@@ -11,6 +11,11 @@ features:
 
 train:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m src.modeling.train_baseline
+
+export:
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m src.export.build_datasets
+
+refresh-all: ingest features train export
 
 api:
 	PYTHONPATH=$(PYTHONPATH) uvicorn api.main:app --reload

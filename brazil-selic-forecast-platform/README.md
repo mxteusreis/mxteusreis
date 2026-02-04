@@ -40,6 +40,11 @@ make features
 make train
 ```
 
+### 4.1) Exportar datasets estáveis (BI)
+```bash
+make export
+```
+
 ### 5) Subir API
 ```bash
 make api
@@ -49,6 +54,9 @@ A API expõe:
 - `GET /health`
 - `GET /series/selic`
 - `GET /forecast/selic?horizon=30`
+- `GET /bi/selic/history`
+- `GET /bi/selic/forecast`
+- `GET /bi/metadata`
 
 ## Web UI (Streamlit)
 
@@ -95,6 +103,35 @@ Próximos passos:
 - Camada de dataset para Power BI + refresh
 - Deploy em cloud
 - MLflow + monitoramento
+
+## Google Looker Studio Integration
+
+Os datasets em `datasets/` são públicos, estáveis e pensados para consumo via URL/CSV.
+### URLs para Looker Studio
+- `http://localhost:8000/bi/selic/history`
+- `http://localhost:8000/bi/selic/forecast`
+
+### Passo a passo (resumido)
+1. No Looker Studio, crie uma fonte de dados do tipo **CSV via URL**.
+2. Cole a URL do endpoint desejado.
+3. Valide o schema e finalize a conexão.
+
+### Schema documentado
+
+**selic_history_latest.csv**
+```
+date,selic_rate
+```
+
+**selic_forecast_latest.csv**
+```
+date,selic_rate_forecast,horizon_days,model_version
+```
+
+### Boas práticas
+- Use a camada `datasets/` como fonte da verdade.
+- Evite regras de negócio no BI (transformações pesadas).
+- As URLs `/bi/...` são estáveis e sem parâmetros, ideais para refresh automático.
 
 ## Notas
 - Este repositório é a versão inicial (v1) com ingestão real do SGS, baseline de regressão com lags e API REST.

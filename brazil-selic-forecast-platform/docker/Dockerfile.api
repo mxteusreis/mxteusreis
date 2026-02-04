@@ -9,6 +9,7 @@ COPY api ./api
 COPY src ./src
 COPY data ./data
 COPY artifacts ./artifacts
+COPY datasets ./datasets
 
 EXPOSE 8000
 
