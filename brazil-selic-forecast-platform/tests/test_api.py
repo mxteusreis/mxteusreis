@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+import importlib
+import sys
 
 import pandas as pd
+
 from fastapi.testclient import TestClient
 
-from api.main import app
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 
 def create_fixture_files(base_dir: Path) -> None:
@@ -21,8 +26,17 @@ def create_fixture_files(base_dir: Path) -> None:
     ).to_csv(artifacts_dir / "forecast.csv", index=False)
 
 
-def test_health() -> None:
-    client = TestClient(app)
+def create_client(monkeypatch, tmp_path: Path) -> TestClient:
+    monkeypatch.setenv("SELIC_PROJECT_ROOT", str(tmp_path))
+    import api.main as api_main
+
+    importlib.reload(api_main)
+    return TestClient(api_main.app)
+
+
+def test_health(monkeypatch, tmp_path: Path) -> None:
+    create_fixture_files(tmp_path)
+    client = create_client(monkeypatch, tmp_path)
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
@@ -30,8 +44,7 @@ def test_health() -> None:
 
 def test_series_endpoint(monkeypatch, tmp_path: Path) -> None:
     create_fixture_files(tmp_path)
-    monkeypatch.setenv("SELIC_PROJECT_ROOT", str(tmp_path))
-    client = TestClient(app)
+    client = create_client(monkeypatch, tmp_path)
     response = client.get("/series/selic")
     assert response.status_code == 200
     assert len(response.json()["series"]) == 2
@@ -39,8 +52,7 @@ def test_series_endpoint(monkeypatch, tmp_path: Path) -> None:
 
 def test_forecast_endpoint(monkeypatch, tmp_path: Path) -> None:
     create_fixture_files(tmp_path)
-    monkeypatch.setenv("SELIC_PROJECT_ROOT", str(tmp_path))
-    client = TestClient(app)
+    client = create_client(monkeypatch, tmp_path)
     response = client.get("/forecast/selic?horizon=1")
     assert response.status_code == 200
     payload = response.json()

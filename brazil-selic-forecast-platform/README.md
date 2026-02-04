@@ -100,7 +100,6 @@ brazil-selic-forecast-platform/
 - Monitoramento de drift e qualidade
 
 Próximos passos:
-- Camada de dataset para Power BI + refresh
 - Deploy em cloud
 - MLflow + monitoramento
 

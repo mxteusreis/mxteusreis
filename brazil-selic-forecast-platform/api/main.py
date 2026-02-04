@@ -44,10 +44,18 @@ def series_selic(
         df = load_series()
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    date_series = pd.to_datetime(df["date"], errors="coerce")
+    valid_mask = date_series.notna()
+    df = df[valid_mask]
+    date_series = date_series[valid_mask]
     if start:
-        df = df[df["date"] >= start]
+        start_dt = pd.to_datetime(start, errors="coerce")
+        if pd.notna(start_dt):
+            df = df[date_series >= start_dt]
     if end:
-        df = df[df["date"] <= end]
+        end_dt = pd.to_datetime(end, errors="coerce")
+        if pd.notna(end_dt):
+            df = df[date_series <= end_dt]
     return SelicSeriesResponse(series=df.to_dict(orient="records"))
 
 
