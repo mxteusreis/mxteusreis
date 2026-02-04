@@ -132,5 +132,38 @@ date,selic_rate_forecast,horizon_days,model_version
 - Evite regras de negócio no BI (transformações pesadas).
 - As URLs `/bi/...` são estáveis e sem parâmetros, ideais para refresh automático.
 
+## Public Deployment & Access
+
+### Arquitetura de deploy
+- **API (FastAPI)**: expõe `/docs`, `/series/selic`, `/forecast/selic` e endpoints `/bi/*`.
+- **UI (Streamlit)**: consome a API pública via `API_BASE_URL`.
+
+### URLs esperadas após deploy
+- UI: `https://<app-url>`
+- API docs: `https://<api-url>/docs`
+- Datasets (CSV):
+  - `https://<api-url>/bi/selic/history`
+  - `https://<api-url>/bi/selic/forecast`
+  - `https://<api-url>/bi/metadata`
+
+### Passo a passo genérico (container)
+1. **Build** da imagem:
+   ```bash
+   docker build -f docker/Dockerfile.api -t selic-api:latest .
+   docker build -f docker/Dockerfile.ui -t selic-ui:latest .
+   ```
+2. **Push** para o registry da sua cloud (Render/Cloud Run/Azure).
+3. **Variáveis de ambiente**:
+   - API: `PORT=8000`
+   - UI: `PORT=8501` e `API_BASE_URL=https://<api-url>`
+4. **Deploy** dos serviços (API e UI).
+
+> Looker Studio consome diretamente os CSVs via URL dos endpoints `/bi/*`.
+
+### Boas práticas de produção (sem overengineering)
+- Cache: considere CDN ou cache de app para reduzir carga em endpoints CSV.
+- Limites de uso: implemente rate limit no futuro se o tráfego crescer.
+- Atualização dos dados: execução manual hoje, agendamento futuro (cron/Cloud Scheduler).
+
 ## Notas
 - Este repositório é a versão inicial (v1) com ingestão real do SGS, baseline de regressão com lags e API REST.

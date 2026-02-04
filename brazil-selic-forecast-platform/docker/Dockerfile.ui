@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-ENV API_BASE_URL=http://api:8000
+ENV PORT=8501
 
 COPY ui/requirements_ui.txt ./requirements_ui.txt
 RUN pip install --no-cache-dir -r requirements_ui.txt
@@ -11,4 +11,4 @@ COPY ui ./ui
 
 EXPOSE 8501
 
-CMD ["streamlit", "run", "ui/app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+CMD ["sh", "-c", "if [ -z \"$API_BASE_URL\" ]; then echo \"API_BASE_URL is required\"; exit 1; fi; streamlit run ui/app.py --server.address=0.0.0.0 --server.port ${PORT}"]
