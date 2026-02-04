@@ -1,0 +1,7 @@
+{
+  "generated_at": "",
+  "data_source": "BCB SGS",
+  "model_type": "LinearRegression (lags)",
+  "model_version": "baseline-lag-regression-v1",
+  "max_forecast_horizon": 0
+}
