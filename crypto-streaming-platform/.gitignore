@@ -1,23 +1,8 @@
-# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-*$py.class
-
-# Virtual environments
+*.egg-info/
 .venv/
-venv/
-
-# Logs and data outputs
-*.log
-data/*
-!data/README.md
-
-# Spark
-spark-warehouse/
-
-# OS
+.env
+.pytest_cache/
 .DS_Store
-
-# IDE
-.vscode/
-.idea/
+data/raw/*.jsonl
