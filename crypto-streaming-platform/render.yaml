@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: crypto-streaming-platform-api
+    env: docker
+    plan: free
+    dockerfilePath: docker/Dockerfile.api
+    envVars:
+      - key: STORAGE_PATH
+        value: /app/data/app.db
+      - key: SYMBOLS
+        value: BTCUSDT,ETHUSDT

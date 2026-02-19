@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: crypto-api
+    environment:
+      STORAGE_PATH: /app/data/app.db
+      SYMBOLS: BTCUSDT,ETHUSDT
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../data:/app/data
+
+  producer-direct:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: crypto-producer-direct
+    command: ["python", "producer/producer.py"]
+    environment:
+      BROKER_MODE: direct
+      STORAGE_PATH: /app/data/app.db
+      SYMBOLS: BTCUSDT,ETHUSDT
+      POLL_INTERVAL_SECONDS: 60
+    volumes:
+      - ../data:/app/data
