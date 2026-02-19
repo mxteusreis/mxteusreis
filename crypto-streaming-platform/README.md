@@ -1,77 +1,129 @@
-# Crypto Streaming Platform
+# crypto-streaming-platform
 
-## Business Problem
-Crypto markets move in seconds, and trading desks, research teams, and risk analysts need a
-reliable, low-latency pipeline to capture price movements as they happen. This project delivers
-that foundation by streaming real-time crypto prices into a scalable data pipeline that can feed
-analytics, dashboards, and machine learning systems.
+A reproducible crypto data platform with streaming ingestion, queryable storage, and public API endpoints for analytics and BI.
 
-## Architecture Overview
-1. **Binance Producer (Python)** pulls real-time prices from the public Binance API every 60 seconds.
-2. **Kafka** receives the events in the `crypto_prices` topic as a durable streaming layer.
-3. **Spark Structured Streaming** consumes the topic, parses JSON events, and prints them to the console.
+## What problem does this solve?
+Most free crypto sources provide current snapshots but not a stable, queryable history suitable for analytics and BI. This project captures Binance market events continuously and exposes that history through API endpoints and stable CSV contracts consumable by Looker Studio.
 
-This first release prioritizes a clean ingestion pipeline and a reproducible local setup.
+## Architecture (v1)
 
-## Tech Stack
-- **Python** for the producer
-- **Kafka + Zookeeper** for streaming ingestion
-- **Docker Compose** for local infrastructure
-- **Apache Spark (PySpark Structured Streaming)** for streaming consumption
-
-## Repository Structure
+```text
+Binance API -> Producer -> Kafka (crypto_prices) -> Consumer -> data/raw JSONL
 ```
+
+## Architecture (v2)
+
+```text
+v1 pipeline + queryable SQLite storage + FastAPI public API + /bi/*.csv endpoints
+```
+
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for Mermaid diagrams.
+
+## Project structure
+
+```text
 crypto-streaming-platform/
-├── producer/               # Binance API producer
-├── kafka/                  # Docker Compose for Kafka
-├── spark/                  # Spark streaming consumer
-├── data/                   # Placeholder for pipeline outputs
-├── notebooks/              # Reserved for future exploration
+├── api/
+├── bi/
+├── consumer/
+├── data/
+├── docker/
+├── producer/
+├── scripts/
+├── tests/
+├── ARCHITECTURE.md
+├── COSTS.md
+├── SECURITY.md
 └── README.md
 ```
 
-## How to Run Locally
+## Quickstart (v1 local Kafka)
 
-### 1) Start Kafka
-```bash
-cd kafka
-docker-compose up -d
+1. `cp .env.example .env`
+2. `make up`
+3. Terminal 1: `make consumer`
+4. Terminal 2: `make producer`
+5. Verify raw files in `data/raw/`
+
+## Quickstart (v2 online/direct mode)
+
+1. `cp .env.example .env`
+2. Set `BROKER_MODE=direct` and keep `STORAGE_PATH=data/app.db`
+3. Start producer: `make producer`
+4. Start API: `make api`
+5. Open `http://localhost:8000/health`
+
+You can also run containerized direct mode:
+
+- `make online-up`
+- API at `http://localhost:8000`
+
+## API endpoints
+
+- `GET /health`
+- `GET /symbols`
+- `GET /trades/latest?symbol=BTCUSDT&limit=200`
+- `GET /trades/range?symbol=BTCUSDT&start=2026-01-01T00:00:00Z&end=2026-01-07T00:00:00Z`
+
+### Stable BI endpoints
+
+- `GET /bi/daily_ohlc.csv?symbol=BTCUSDT&days=90`
+- `GET /bi/daily_volume.csv?symbol=BTCUSDT&days=90`
+- `GET /bi/latest_prices.csv?symbols=BTCUSDT,ETHUSDT`
+
+All BI endpoints return CSV with fixed headers and cache-control headers.
+
+## Data contract (event)
+
+```json
+{
+  "timestamp_utc": "2026-01-15T14:03:22.913852+00:00",
+  "symbol": "BTCUSDT",
+  "lastPrice": "68001.20",
+  "priceChangePercent": "1.87",
+  "volume": "24567.123",
+  "source": "binance_api_v3_ticker_24hr"
+}
 ```
 
-### 2) Create the Kafka Topic
-```bash
-docker exec -it kafka bash -c \
-  "kafka-topics --bootstrap-server localhost:9092 --create --topic crypto_prices --partitions 1 --replication-factor 1"
-```
+## Environment variables
 
-### 3) Run the Producer
-```bash
-cd ../producer
-python binance_producer.py
-```
+- `STORAGE_PATH` (e.g., `data/app.db`)
+- `SYMBOLS`
+- `POLL_INTERVAL_SECONDS`
+- `BROKER_MODE` (`kafka` | `direct`)
+- `ENABLE_DB_SINK`
+- `KAFKA_BOOTSTRAP_SERVERS`
+- `TOPIC_NAME`
 
-Environment variables (optional):
-- `KAFKA_BOOTSTRAP_SERVERS` (default: `localhost:9092`)
-- `KAFKA_TOPIC` (default: `crypto_prices`)
-- `CRYPTO_SYMBOLS` (default: `BTCUSDT,ETHUSDT`)
+## Live Demo (v2)
 
-### 4) Run the Spark Streaming Consumer
-```bash
-cd ../spark
-spark-submit \
-  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1 \
-  streaming_job.py
-```
+- API base URL: `https://<your-public-url>`
+- Health: `https://<your-public-url>/health`
+- BI sample: `https://<your-public-url>/bi/daily_ohlc.csv?symbol=BTCUSDT&days=90`
 
-You should see JSON records printed to the console as the producer publishes data.
+## Deploy (free tier)
 
-## Next Planned Evolutions
-- Delta Lake Bronze/Silver/Gold data lakehouse layout
-- Volatility and market microstructure feature generation
-- Machine learning models for anomaly detection and forecasting
-- REST API for downstream consumption
-- Kubernetes deployment for scalable streaming
+A Render blueprint is included in [`render.yaml`](render.yaml). You can also deploy with Docker using `docker/Dockerfile.api`.
 
-## Notes
-- This repository focuses on production-grade pipeline fundamentals, not notebooks or ML experimentation.
-- Public Binance API is rate-limited; keep the 60-second interval for stability.
+## Commands
+
+- `make up` / `make down`
+- `make producer`
+- `make consumer`
+- `make api`
+- `make online-up` / `make online-down`
+- `make backfill`
+- `make bi-build`
+- `make verify-bi`
+- `make lint`
+- `make test`
+
+## Roadmap (v2+)
+
+- Bronze/Silver/Gold modeling
+- Volatility metrics and market features
+- Hardened rate limiting and API auth options
+- Stable `/bi/*` datasets for broader BI use
+- Public deployment hardening
+- Future Kubernetes orchestration
