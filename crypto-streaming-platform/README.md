@@ -1,79 +1,86 @@
 # crypto-streaming-platform
 
-A reproducible crypto data platform with streaming ingestion, queryable storage, and public API endpoints for analytics and BI.
+A reproducible streaming pipeline that ingests real crypto market snapshots from Binance, publishes events to Kafka, and stores a raw append-only history for later analytics.
 
 ## What problem does this solve?
-Most free crypto sources provide current snapshots but not a stable, queryable history suitable for analytics and BI. This project captures Binance market events continuously and exposes that history through API endpoints and stable CSV contracts consumable by Looker Studio.
+Most free crypto sources expose only current snapshots or limited history. For data engineering use cases (auditing, analytics baselines, and future feature generation), teams need a reliable pipeline that continuously captures market events and persists the raw trail.
+
+This project solves that by building a local-first streaming pipeline that can be extended to cloud/public deployment in future phases.
 
 ## Architecture (v1)
 
 ```text
-Binance API -> Producer -> Kafka (crypto_prices) -> Consumer -> data/raw JSONL
+Binance API (ticker/24hr)
+    -> Producer (Python)
+    -> Kafka topic: crypto_prices
+    -> Consumer (Python)
+    -> Raw Storage (JSONL in data/raw/)
 ```
-
-## Architecture (v2)
-
-```text
-v1 pipeline + queryable SQLite storage + FastAPI public API + /bi/*.csv endpoints
-```
-
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) for Mermaid diagrams.
 
 ## Project structure
 
 ```text
 crypto-streaming-platform/
-├── api/
-├── bi/
-├── consumer/
-├── data/
+├── README.md
+├── .gitignore
+├── requirements.txt
+├── .env.example
+├── Makefile
 ├── docker/
+│   └── docker-compose.yml
 ├── producer/
-├── scripts/
-├── tests/
-├── ARCHITECTURE.md
-├── COSTS.md
-├── SECURITY.md
-└── README.md
+│   ├── binance_client.py
+│   └── producer.py
+├── consumer/
+│   ├── consumer.py
+│   └── storage.py
+├── data/
+│   ├── raw/
+│   └── README.md
+└── tests/
+    └── test_binance_client.py
 ```
 
-## Quickstart (v1 local Kafka)
+## Quickstart
 
-1. `cp .env.example .env`
-2. `make up`
-3. Terminal 1: `make consumer`
-4. Terminal 2: `make producer`
-5. Verify raw files in `data/raw/`
+1. Install dependencies:
+   ```bash
+   python3 -m venv .venv && source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
+2. Copy environment file:
+   ```bash
+   cp .env.example .env
+   ```
+3. Start Kafka and create topic automatically:
+   ```bash
+   make up
+   ```
+4. Run consumer in terminal #1:
+   ```bash
+   make consumer
+   ```
+5. Run producer in terminal #2:
+   ```bash
+   make producer
+   ```
+6. Check raw files:
+   ```bash
+   ls data/raw/
+   tail -n 5 data/raw/crypto_prices_YYYY-MM-DD.jsonl
+   ```
 
-## Quickstart (v2 online/direct mode)
+## Configuration
 
-1. `cp .env.example .env`
-2. Set `BROKER_MODE=direct` and keep `STORAGE_PATH=data/app.db`
-3. Start producer: `make producer`
-4. Start API: `make api`
-5. Open `http://localhost:8000/health`
+- `KAFKA_BOOTSTRAP_SERVERS` (default: `localhost:9092`)
+- `TOPIC_NAME` (default: `crypto_prices`)
+- `SYMBOLS` (default: `BTCUSDT,ETHUSDT`)
+- `POLL_INTERVAL_SECONDS` (default: `60`)
+- `CONSUMER_GROUP_ID` (default: `crypto-raw-consumer`)
 
-You can also run containerized direct mode:
+## Data contract
 
-- `make online-up`
-- API at `http://localhost:8000`
-
-## API endpoints
-
-- `GET /health`
-- `GET /symbols`
-- `GET /trades/latest?symbol=BTCUSDT&limit=200`
-- `GET /trades/range?symbol=BTCUSDT&start=2026-01-01T00:00:00Z&end=2026-01-07T00:00:00Z`
-
-### Stable BI endpoints
-
-- `GET /bi/daily_ohlc.csv?symbol=BTCUSDT&days=90`
-- `GET /bi/daily_volume.csv?symbol=BTCUSDT&days=90`
-- `GET /bi/latest_prices.csv?symbols=BTCUSDT,ETHUSDT`
-
-All BI endpoints return CSV with fixed headers and cache-control headers.
-
-## Data contract (event)
+Each event sent to Kafka and persisted in raw storage follows this schema:
 
 ```json
 {
@@ -86,44 +93,21 @@ All BI endpoints return CSV with fixed headers and cache-control headers.
 }
 ```
 
-## Environment variables
-
-- `STORAGE_PATH` (e.g., `data/app.db`)
-- `SYMBOLS`
-- `POLL_INTERVAL_SECONDS`
-- `BROKER_MODE` (`kafka` | `direct`)
-- `ENABLE_DB_SINK`
-- `KAFKA_BOOTSTRAP_SERVERS`
-- `TOPIC_NAME`
-
-## Live Demo (v2)
-
-- API base URL: `https://<your-public-url>`
-- Health: `https://<your-public-url>/health`
-- BI sample: `https://<your-public-url>/bi/daily_ohlc.csv?symbol=BTCUSDT&days=90`
-
-## Deploy (free tier)
-
-A Render blueprint is included in [`render.yaml`](render.yaml). You can also deploy with Docker using `docker/Dockerfile.api`.
-
 ## Commands
 
-- `make up` / `make down`
-- `make producer`
-- `make consumer`
-- `make api`
-- `make online-up` / `make online-down`
-- `make backfill`
-- `make bi-build`
-- `make verify-bi`
-- `make lint`
-- `make test`
+```bash
+make up        # start Kafka + Zookeeper + topic init
+make down      # stop all containers
+make producer  # run producer loop
+make consumer  # run consumer loop
+make test      # run tests
+```
 
 ## Roadmap (v2+)
 
-- Bronze/Silver/Gold modeling
-- Volatility metrics and market features
-- Hardened rate limiting and API auth options
-- Stable `/bi/*` datasets for broader BI use
-- Public deployment hardening
+- Bronze/Silver/Gold layered modeling
+- Volatility and derived market metrics
+- REST API for historical queries
+- Stable CSV datasets in `/bi/*` for Looker Studio
+- Public free deployment (API + UI)
 - Future Kubernetes orchestration
