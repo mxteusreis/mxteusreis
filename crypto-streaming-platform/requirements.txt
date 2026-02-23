@@ -1,8 +1,4 @@
 kafka-python==2.0.2
 python-dotenv==1.0.1
 requests==2.32.3
-fastapi==0.115.6
-uvicorn==0.34.0
 pytest==8.3.2
-httpx==0.28.1
-ruff==0.8.4
