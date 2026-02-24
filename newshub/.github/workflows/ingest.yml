@@ -1,0 +1,17 @@
+name: ingest
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call internal ingest endpoint
+        run: |
+          curl -X POST "${{ secrets.API_BASE_URL }}/internal/ingest" \
+            -H "X-Internal-Token: ${{ secrets.INTERNAL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --fail-with-body
