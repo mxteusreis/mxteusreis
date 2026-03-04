@@ -23,11 +23,8 @@ def get_feed(
     if not source_ids:
         return []
 
-    query = (
-        client.table('articles')
-        .select('id,title,url,published_at,excerpt,image_url,sources(name,category,homepage_url)')
-        .in_('source_id', source_ids)
-    )
+    source_select = 'sources!inner(name,category,homepage_url)' if category else 'sources(name,category,homepage_url)'
+    query = client.table('articles').select(f'id,title,url,published_at,excerpt,image_url,{source_select}').in_('source_id', source_ids)
 
     if category:
         query = query.eq('sources.category', category)

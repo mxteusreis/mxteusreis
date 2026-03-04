@@ -1,4 +1,4 @@
-from app_logic import send_digest
+from worker.app_logic import send_digest
 
 
 if __name__ == '__main__':

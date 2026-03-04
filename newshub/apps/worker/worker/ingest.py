@@ -1,4 +1,4 @@
-from app_logic import ingest
+from worker.app_logic import ingest
 
 
 if __name__ == '__main__':

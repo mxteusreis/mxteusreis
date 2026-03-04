@@ -1,4 +1,5 @@
 from datetime import datetime
+from email.utils import parsedate_to_datetime
 import hashlib
 
 import feedparser
@@ -27,6 +28,7 @@ def ingest_rss_sources() -> dict:
 
     for source in sources:
         feed_resp = httpx.get(source['rss_url'], timeout=15.0)
+        feed_resp.raise_for_status()
         parsed = feedparser.parse(feed_resp.text)
 
         for entry in parsed.entries:
@@ -44,8 +46,8 @@ def ingest_rss_sources() -> dict:
 
             published_raw = getattr(entry, 'published', None) or getattr(entry, 'updated', None)
             try:
-                published_at = datetime.strptime(published_raw, '%a, %d %b %Y %H:%M:%S %z').isoformat() if published_raw else datetime.utcnow().isoformat()
-            except ValueError:
+                published_at = parsedate_to_datetime(published_raw).isoformat() if published_raw else datetime.utcnow().isoformat()
+            except (TypeError, ValueError):
                 published_at = datetime.utcnow().isoformat()
 
             summary = getattr(entry, 'summary', None) or getattr(entry, 'description', None)
