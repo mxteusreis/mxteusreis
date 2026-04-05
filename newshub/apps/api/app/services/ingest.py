@@ -1,11 +1,15 @@
 from datetime import datetime
 from email.utils import parsedate_to_datetime
 import hashlib
+import logging
+from urllib.parse import urlparse
 
 import feedparser
 import httpx
 
 from app.services.db import get_service_client
+
+logger = logging.getLogger(__name__)
 
 
 def _hash_article(title: str, url: str) -> str:
@@ -19,17 +23,64 @@ def _build_excerpt(summary: str | None, max_len: int = 220) -> str:
     return f'{summary[: max_len - 3]}...'
 
 
+def ensure_url_has_scheme(url: str | None) -> str | None:
+    if not url:
+        return None
+    candidate = url.strip()
+    parsed = urlparse(candidate)
+    if not parsed.scheme:
+        candidate = f'https://{candidate}'
+        parsed = urlparse(candidate)
+    if parsed.scheme not in {'http', 'https'} or not parsed.netloc:
+        return None
+    return candidate
+
+
 def ingest_rss_sources() -> dict:
     client = get_service_client()
     sources = client.table('sources').select('*').eq('is_active', True).execute().data or []
 
     inserted = 0
     skipped = 0
+    sources_failed = 0
+    failures: list[dict[str, str]] = []
 
     for source in sources:
-        feed_resp = httpx.get(source['rss_url'], timeout=15.0)
-        feed_resp.raise_for_status()
-        parsed = feedparser.parse(feed_resp.text)
+        source_name = source.get('name', 'Unknown source')
+        raw_rss_url = source.get('rss_url')
+        rss_url = ensure_url_has_scheme(raw_rss_url)
+        if not rss_url:
+            error_message = 'Invalid rss_url. Expected http/https URL with netloc.'
+            logger.warning('RSS source failed: source=%s rss_url=%s error=%s', source_name, raw_rss_url, error_message)
+            sources_failed += 1
+            failures.append({'source': source_name, 'rss_url': str(raw_rss_url), 'error': error_message})
+            continue
+
+        logger.info('Fetching RSS: %s', rss_url)
+        try:
+            feed_resp = httpx.get(rss_url, timeout=15.0, follow_redirects=True)
+            feed_resp.raise_for_status()
+            parsed = feedparser.parse(feed_resp.text)
+        except httpx.ConnectError as exc:
+            logger.warning('RSS source failed: source=%s rss_url=%s error=%s', source_name, rss_url, str(exc))
+            sources_failed += 1
+            failures.append({'source': source_name, 'rss_url': rss_url, 'error': f'ConnectError: {exc}'})
+            continue
+        except httpx.TimeoutException as exc:
+            logger.warning('RSS source failed: source=%s rss_url=%s error=%s', source_name, rss_url, str(exc))
+            sources_failed += 1
+            failures.append({'source': source_name, 'rss_url': rss_url, 'error': f'TimeoutException: {exc}'})
+            continue
+        except httpx.RequestError as exc:
+            logger.warning('RSS source failed: source=%s rss_url=%s error=%s', source_name, rss_url, str(exc))
+            sources_failed += 1
+            failures.append({'source': source_name, 'rss_url': rss_url, 'error': f'RequestError: {exc}'})
+            continue
+        except Exception as exc:
+            logger.exception('RSS source failed unexpectedly: source=%s rss_url=%s', source_name, rss_url)
+            sources_failed += 1
+            failures.append({'source': source_name, 'rss_url': rss_url, 'error': f'UnexpectedError: {exc}'})
+            continue
 
         for entry in parsed.entries:
             title = getattr(entry, 'title', '').strip()
@@ -66,4 +117,12 @@ def ingest_rss_sources() -> dict:
             client.table('articles').insert(payload).execute()
             inserted += 1
 
-    return {'inserted': inserted, 'skipped': skipped, 'sources_processed': len(sources)}
+    summary = {
+        'inserted': inserted,
+        'skipped': skipped,
+        'sources_processed': len(sources),
+        'sources_failed': sources_failed,
+        'failures': failures,
+    }
+    logger.info('Ingest summary: %s', summary)
+    return summary
