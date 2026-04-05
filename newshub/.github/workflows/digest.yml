@@ -1,0 +1,17 @@
+name: digest
+
+on:
+  schedule:
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call internal digest endpoint
+        run: |
+          curl -X POST "${{ secrets.API_BASE_URL }}/internal/send-digest" \
+            -H "X-Internal-Token: ${{ secrets.INTERNAL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --fail-with-body
