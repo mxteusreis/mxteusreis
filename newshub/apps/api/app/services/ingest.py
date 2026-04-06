@@ -121,17 +121,9 @@ def ingest_rss_sources() -> dict:
                 'image_url': image_url,
                 'hash': article_hash,
             }
-            try:
-                client.table('articles').insert(payload).execute()
-                logger.info('Inserted new article: %s', url)
-                inserted += 1
-            except Exception as exc:
-                message = str(exc).lower()
-                if 'duplicate key' in message or 'articles_url_key' in message:
-                    logger.info('Skipping duplicate article after insert conflict: %s', url)
-                    skipped += 1
-                    continue
-                raise
+            client.table("articles").upsert(payload, on_conflict="url").execute()
+            logger.info('Inserted new article: %s', url)
+            inserted += 1
 
     summary = {
         'inserted': inserted,

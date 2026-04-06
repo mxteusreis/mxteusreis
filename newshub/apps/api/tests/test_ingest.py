@@ -43,6 +43,9 @@ class FakeQuery:
     def insert(self, *_args, **_kwargs):
         return self
 
+    def upsert(self, *_args, **_kwargs):
+        return self
+
     def execute(self):
         return type('Resp', (), {'data': self._data})()
 
@@ -71,9 +74,7 @@ class FakeClient:
                     query._data = [{'id': 'existing'}] if value in self.existing_hashes else []
                 return query
 
-            def _insert(payload):
-                if payload['url'] in self.existing_urls:
-                    raise Exception('duplicate key value violates unique constraint \"articles_url_key\"')
+            def _upsert(payload, **_kwargs):
                 self.existing_urls.add(payload['url'])
                 self.existing_hashes.add(payload['hash'])
                 self.inserted.append(payload)
@@ -81,7 +82,7 @@ class FakeClient:
 
             query.select = _select
             query.eq = _eq
-            query.insert = _insert
+            query.upsert = _upsert
             return query
         raise AssertionError(f'Unexpected table: {name}')
 
