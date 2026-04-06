@@ -56,31 +56,32 @@ def ingest_rss_sources() -> dict:
             failures.append({'source': source_name, 'rss_url': str(raw_rss_url), 'error': error_message})
             continue
 
+        print('Fetching RSS:', rss_url)
         logger.info('Fetching RSS: %s', rss_url)
         try:
             feed_resp = httpx.get(rss_url, timeout=15.0, follow_redirects=True)
             feed_resp.raise_for_status()
             parsed = feedparser.parse(feed_resp.text)
         except httpx.ConnectError as exc:
-            print(f'RSS fetch failed for {rss_url}:', exc)
+            print(f'RSS failed: {rss_url} -> {exc}')
             logger.warning('RSS source failed: source=%s rss_url=%s error=%s', source_name, rss_url, str(exc))
             sources_failed += 1
             failures.append({'source': source_name, 'rss_url': rss_url, 'error': f'ConnectError: {exc}'})
             continue
         except httpx.TimeoutException as exc:
-            print(f'RSS fetch failed for {rss_url}:', exc)
+            print(f'RSS failed: {rss_url} -> {exc}')
             logger.warning('RSS source failed: source=%s rss_url=%s error=%s', source_name, rss_url, str(exc))
             sources_failed += 1
             failures.append({'source': source_name, 'rss_url': rss_url, 'error': f'TimeoutException: {exc}'})
             continue
         except httpx.RequestError as exc:
-            print(f'RSS fetch failed for {rss_url}:', exc)
+            print(f'RSS failed: {rss_url} -> {exc}')
             logger.warning('RSS source failed: source=%s rss_url=%s error=%s', source_name, rss_url, str(exc))
             sources_failed += 1
             failures.append({'source': source_name, 'rss_url': rss_url, 'error': f'RequestError: {exc}'})
             continue
         except Exception as exc:
-            print(f'RSS fetch failed for {rss_url}:', exc)
+            print(f'RSS failed: {rss_url} -> {exc}')
             logger.exception('RSS source failed unexpectedly: source=%s rss_url=%s', source_name, rss_url)
             sources_failed += 1
             failures.append({'source': source_name, 'rss_url': rss_url, 'error': f'UnexpectedError: {exc}'})
