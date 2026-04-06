@@ -62,21 +62,25 @@ def ingest_rss_sources() -> dict:
             feed_resp.raise_for_status()
             parsed = feedparser.parse(feed_resp.text)
         except httpx.ConnectError as exc:
+            print(f'RSS fetch failed for {rss_url}:', exc)
             logger.warning('RSS source failed: source=%s rss_url=%s error=%s', source_name, rss_url, str(exc))
             sources_failed += 1
             failures.append({'source': source_name, 'rss_url': rss_url, 'error': f'ConnectError: {exc}'})
             continue
         except httpx.TimeoutException as exc:
+            print(f'RSS fetch failed for {rss_url}:', exc)
             logger.warning('RSS source failed: source=%s rss_url=%s error=%s', source_name, rss_url, str(exc))
             sources_failed += 1
             failures.append({'source': source_name, 'rss_url': rss_url, 'error': f'TimeoutException: {exc}'})
             continue
         except httpx.RequestError as exc:
+            print(f'RSS fetch failed for {rss_url}:', exc)
             logger.warning('RSS source failed: source=%s rss_url=%s error=%s', source_name, rss_url, str(exc))
             sources_failed += 1
             failures.append({'source': source_name, 'rss_url': rss_url, 'error': f'RequestError: {exc}'})
             continue
         except Exception as exc:
+            print(f'RSS fetch failed for {rss_url}:', exc)
             logger.exception('RSS source failed unexpectedly: source=%s rss_url=%s', source_name, rss_url)
             sources_failed += 1
             failures.append({'source': source_name, 'rss_url': rss_url, 'error': f'UnexpectedError: {exc}'})
