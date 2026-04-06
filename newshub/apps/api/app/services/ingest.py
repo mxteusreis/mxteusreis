@@ -92,6 +92,13 @@ def ingest_rss_sources() -> dict:
             article_hash = _hash_article(title, url)
             exists = client.table('articles').select('id').eq('hash', article_hash).limit(1).execute().data
             if exists:
+                logger.info('Skipping duplicate article by hash: %s', url)
+                skipped += 1
+                continue
+
+            exists_url = client.table('articles').select('id').eq('url', url).limit(1).execute().data
+            if exists_url:
+                logger.info('Skipping duplicate article by url: %s', url)
                 skipped += 1
                 continue
 
@@ -114,8 +121,17 @@ def ingest_rss_sources() -> dict:
                 'image_url': image_url,
                 'hash': article_hash,
             }
-            client.table('articles').insert(payload).execute()
-            inserted += 1
+            try:
+                client.table('articles').insert(payload).execute()
+                logger.info('Inserted new article: %s', url)
+                inserted += 1
+            except Exception as exc:
+                message = str(exc).lower()
+                if 'duplicate key' in message or 'articles_url_key' in message:
+                    logger.info('Skipping duplicate article after insert conflict: %s', url)
+                    skipped += 1
+                    continue
+                raise
 
     summary = {
         'inserted': inserted,
